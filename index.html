@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12141c">
+<title>Scramble</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="app">
+
+  <header class="masthead">
+    <h1>SCRAMBLE</h1>
+    <p class="tagline">Find every word hiding inside the word.</p>
+  </header>
+
+  <!-- ---------- setup ---------- -->
+  <section id="setup" class="panel">
+    <div class="field">
+      <label for="length">Word length</label>
+      <div class="slider-row">
+        <input type="range" id="length" min="5" max="20" value="8">
+        <output id="lengthOut">8</output>
+      </div>
+      <p class="hint">Longer words hide far more sub-words.</p>
+    </div>
+
+    <div class="field">
+      <label>Shortest word that counts</label>
+      <div class="segmented" id="minLen">
+        <button type="button" data-min="2">2</button>
+        <button type="button" data-min="3" class="on">3</button>
+        <button type="button" data-min="4">4</button>
+      </div>
+      <p class="hint">Higher means fewer, meatier words to find.</p>
+    </div>
+
+    <details class="field custom" id="customPanel">
+      <summary>Use my own word</summary>
+      <input type="text" id="customWord" placeholder="e.g. animal" autocomplete="off"
+             autocapitalize="off" spellcheck="false" maxlength="20">
+      <p class="hint" id="customHint">A real word, 5&ndash;20 letters.</p>
+    </details>
+
+    <button id="start" class="primary">Start game</button>
+  </section>
+
+  <!-- ---------- game ---------- -->
+  <section id="game" class="panel" hidden>
+
+    <div class="tiles-wrap">
+      <div id="tiles" class="tiles"></div>
+    </div>
+
+    <div class="scoreboard">
+      <div class="stat"><span id="foundCount">0</span><label>found</label></div>
+      <div class="stat"><span id="totalCount">0</span><label>possible</label></div>
+    </div>
+
+    <div class="progress"><div id="progressBar"></div></div>
+
+    <form id="guessForm" autocomplete="off">
+      <input type="text" id="guess" placeholder="type a word&hellip;" autocomplete="off"
+             autocapitalize="off" autocorrect="off" spellcheck="false">
+      <button type="submit" class="primary">Enter</button>
+    </form>
+
+    <p id="message" class="message">&nbsp;</p>
+
+    <div id="results" class="results"></div>
+
+    <div class="actions">
+      <button id="giveUp" class="ghost">Give up</button>
+      <button id="newGame" class="ghost">New word</button>
+    </div>
+  </section>
+
+  <!-- ---------- end-of-round banner ---------- -->
+  <div id="banner" class="banner" hidden>
+    <h2 id="bannerTitle"></h2>
+    <p id="bannerText"></p>
+    <button id="bannerNew" class="primary">Play again</button>
+  </div>
+
+</div>
+
+<script src="words.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
