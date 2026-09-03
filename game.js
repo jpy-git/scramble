@@ -197,6 +197,8 @@
 
     el.guess.value = "";
     highlight("");
+    // stay in the box so the next guess can be typed straight away
+    if (!state.over) el.guess.focus();
   }
 
   function finish(won) {
@@ -270,6 +272,12 @@
     submitGuess(el.guess.value);
   });
 
+  // The tap that submits must not move focus - that would close the keyboard
+  // between guesses. mousedown is where the focus change would happen, on a
+  // phone as much as on a desktop.
+  el.guessForm.querySelector("button[type=submit]")
+    .addEventListener("mousedown", (e) => e.preventDefault());
+
   el.guess.addEventListener("input", () => highlight(el.guess.value));
 
   el.giveUp.addEventListener("click", () => {
@@ -288,4 +296,47 @@
   });
 
   el.lengthOut.textContent = el.length.value;
+
+  /* ---------- phone: hold the page still and dock the box to the keyboard ----------
+
+     On a phone the page has no scroll of its own (see style.css), so the browser
+     cannot scroll it to reveal the focused input - the jump. The shell is sized
+     to the visual viewport instead, which is exactly the room left above the
+     keyboard, and the guess box is pinned to the bottom of it. */
+
+  const app = document.querySelector(".app");
+  const vv = window.visualViewport;
+  const phone = window.matchMedia("(max-width: 720px) and (min-height: 501px)");
+
+  function syncViewport() {
+    if (!phone.matches) {
+      app.style.removeProperty("--vh");
+      app.style.removeProperty("--vtop");
+      document.body.classList.remove("kb");
+      return;
+    }
+
+    const h = vv ? vv.height : window.innerHeight;
+    const top = vv ? vv.offsetTop : 0;
+    // Chrome shrinks the visual viewport for the keyboard but leaves the layout
+    // viewport alone, so what is missing from the bottom is the keyboard.
+    const keyboard = vv ? Math.max(0, window.innerHeight - (h + top)) : 0;
+
+    app.style.setProperty("--vh", h + "px");
+    app.style.setProperty("--vtop", top + "px");
+    document.body.classList.toggle("kb", keyboard > 100);
+
+    // Belt and braces for browsers that scroll the window anyway: put it back
+    // in the same frame, before anything is painted out of place.
+    if (window.scrollY || top) window.scrollTo(0, 0);
+  }
+
+  if (vv) {
+    vv.addEventListener("resize", syncViewport);
+    vv.addEventListener("scroll", syncViewport);
+  }
+  window.addEventListener("resize", syncViewport);
+  window.addEventListener("orientationchange", () => setTimeout(syncViewport, 250));
+  phone.addEventListener("change", syncViewport);
+  syncViewport();
 })();

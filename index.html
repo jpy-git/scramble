@@ -48,41 +48,49 @@
   </section>
 
   <!-- ---------- game ---------- -->
+  <!-- Three bands: the board stays put, the entry docks above the keyboard,
+       and the feed is what the keyboard is allowed to cover. -->
   <section id="game" class="panel" hidden>
 
-    <div class="tiles-wrap">
-      <div id="tiles" class="tiles"></div>
+    <div class="board">
+      <div class="tiles-wrap">
+        <div id="tiles" class="tiles"></div>
+      </div>
+
+      <div class="scoreboard">
+        <div class="stat"><span id="foundCount">0</span><label>found</label></div>
+        <div class="stat"><span id="totalCount">0</span><label>possible</label></div>
+      </div>
+
+      <div class="progress"><div id="progressBar"></div></div>
     </div>
 
-    <div class="scoreboard">
-      <div class="stat"><span id="foundCount">0</span><label>found</label></div>
-      <div class="stat"><span id="totalCount">0</span><label>possible</label></div>
+    <div class="entry">
+      <form id="guessForm" autocomplete="off">
+        <input type="text" id="guess" placeholder="type a word&hellip;" autocomplete="off"
+               autocapitalize="off" autocorrect="off" spellcheck="false">
+        <button type="submit" class="primary">Enter</button>
+      </form>
+
+      <p id="message" class="message">&nbsp;</p>
     </div>
 
-    <div class="progress"><div id="progressBar"></div></div>
+    <div class="feed">
+      <div id="results" class="results"></div>
 
-    <form id="guessForm" autocomplete="off">
-      <input type="text" id="guess" placeholder="type a word&hellip;" autocomplete="off"
-             autocapitalize="off" autocorrect="off" spellcheck="false">
-      <button type="submit" class="primary">Enter</button>
-    </form>
+      <div class="actions">
+        <button id="giveUp" class="ghost">Give up</button>
+        <button id="newGame" class="ghost">New word</button>
+      </div>
 
-    <p id="message" class="message">&nbsp;</p>
-
-    <div id="results" class="results"></div>
-
-    <div class="actions">
-      <button id="giveUp" class="ghost">Give up</button>
-      <button id="newGame" class="ghost">New word</button>
+      <!-- ---------- end-of-round banner ---------- -->
+      <div id="banner" class="banner" hidden>
+        <h2 id="bannerTitle"></h2>
+        <p id="bannerText"></p>
+        <button id="bannerNew" class="primary">Play again</button>
+      </div>
     </div>
   </section>
-
-  <!-- ---------- end-of-round banner ---------- -->
-  <div id="banner" class="banner" hidden>
-    <h2 id="bannerTitle"></h2>
-    <p id="bannerText"></p>
-    <button id="bannerNew" class="primary">Play again</button>
-  </div>
 
 </div>
 
