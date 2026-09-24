@@ -1,6 +1,7 @@
 /* Scramble - game logic.
-   Depends on WORDS (all valid answers) and PUZZLES (starting words by length)
-   from words.js. */
+   Depends on WORDS (target words), BONUS (every other accepted word), PUZZLES
+   (starting words by length) and PUZZLE_COUNTS / MIN_LENS (each starting word's
+   target count per "shortest word" setting) from words.js. */
 
 (() => {
   "use strict";
@@ -12,6 +13,7 @@
     length: $("length"), lengthOut: $("lengthOut"), minLen: $("minLen"),
     customWord: $("customWord"), customHint: $("customHint"),
     customPanel: $("customPanel"), start: $("start"),
+    spreadRead: $("spreadRead"), spreadChart: $("spreadChart"), spreadTable: $("spreadTable"),
     tiles: $("tiles"),
     foundCount: $("foundCount"), totalCount: $("totalCount"),
     progressBar: $("progressBar"),
@@ -20,11 +22,15 @@
     bannerTitle: $("bannerTitle"), bannerText: $("bannerText"), bannerNew: $("bannerNew"),
   };
 
-  const DICT = new Set(WORDS);
+  // A guess is accepted if it is in either list, but only WORDS count toward
+  // the puzzle - see build_dict.py for how the two are split.
+  const TARGETS = new Set(WORDS);
+  const EXTRAS = new Set(BONUS);
+  const isWord = (w) => TARGETS.has(w) || EXTRAS.has(w);
   const CUSTOM_HINT = "A real word, 5\u201320 letters.";
 
   let state = null;
-  let minLen = 3;
+  let minLen = 4;
 
   /* ---------- letters ---------- */
 
@@ -66,6 +72,7 @@
       pool: tally(word),
       answers: answersFor(word, minLen),
       found: new Set(),
+      bonus: new Set(),
       over: false,
     };
 
@@ -131,7 +138,6 @@
       : state.answers.filter((w) => state.found.has(w));
 
     el.results.innerHTML = "";
-    if (!show.length) return;
 
     const byLength = new Map();
     for (const w of show) {
@@ -162,11 +168,179 @@
       group.appendChild(chips);
       el.results.appendChild(group);
     }
+
+    renderBonus(freshWord);
+  }
+
+  // Bonus words are real but uncommon, so they sit apart from the words the
+  // puzzle counts.
+  function renderBonus(freshWord) {
+    if (!state.bonus.size) return;
+
+    const group = document.createElement("div");
+    group.className = "group";
+
+    const heading = document.createElement("h3");
+    heading.textContent = `Bonus words - ${state.bonus.size}`;
+    group.appendChild(heading);
+
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    const words = [...state.bonus].sort((a, b) => b.length - a.length || a.localeCompare(b));
+    for (const w of words) {
+      const chip = document.createElement("span");
+      chip.className = "chip bonus" + (w === freshWord ? " fresh" : "");
+      chip.textContent = w;
+      chips.appendChild(chip);
+    }
+    group.appendChild(chips);
+    el.results.appendChild(group);
   }
 
   function say(text, tone) {
     el.message.textContent = text || " ";
     el.message.className = "message " + (tone || "");
+  }
+
+  /* ---------- setup: how many words a round will have ---------- */
+
+  const SVG = "http://www.w3.org/2000/svg";
+  const CHART = { height: 110, axis: 22, top: 18, bins: 20 };
+
+  function svg(tag, attrs, parent) {
+    const node = document.createElementNS(SVG, tag);
+    for (const k in attrs) node.setAttribute(k, attrs[k]);
+    if (parent) parent.appendChild(node);
+    return node;
+  }
+
+  function percentile(sorted, p) {
+    return sorted[Math.min(sorted.length - 1, Math.round(p * (sorted.length - 1)))];
+  }
+
+  // 1, 2, 5, 10, 20, 50... - the smallest step that fits `span` into `bins` bins.
+  function niceStep(span, bins) {
+    const raw = Math.max(1, span / bins);
+    const mag = 10 ** Math.floor(Math.log10(raw));
+    return [1, 2, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+  }
+
+  // Precomputed at build time: computing it here would mean hundreds of
+  // milliseconds of dictionary scans on every slider tick.
+  function roundSizes(length, min) {
+    const counts = PUZZLE_COUNTS[String(length)] || [];
+    const i = MIN_LENS.indexOf(min);
+    return counts.map((c) => c[i]).sort((a, b) => a - b);
+  }
+
+  const fmt = (n) => n.toLocaleString();
+  const rangeText = (b, step) => (step === 1 ? fmt(b.from) : `${fmt(b.from)}\u2013${fmt(b.to)}`);
+
+  function renderSpread() {
+    const sizes = roundSizes(Number(el.length.value), minLen);
+    el.spreadChart.innerHTML = "";
+    el.spreadTable.innerHTML = "";
+    el.spreadRead.innerHTML = "";
+    if (!sizes.length) return;
+
+    const p10 = percentile(sizes, 0.1), p50 = percentile(sizes, 0.5), p90 = percentile(sizes, 0.9);
+    const lo = sizes[0], hi = sizes[sizes.length - 1];
+
+    const typical = document.createElement("strong");
+    typical.textContent = `${fmt(p50)} words`;
+    el.spreadRead.append("Median ", typical, `. 80% of rounds: ${fmt(p10)}\u2013${fmt(p90)} words.`);
+    if (sizes.length < 20) el.spreadRead.append(` Only ${sizes.length} starting words at this length.`);
+
+    // Bin the counts.
+    const step = niceStep(hi - lo, CHART.bins);
+    const start = Math.floor(lo / step) * step;
+    const bins = [];
+    for (let from = start; from <= hi; from += step) bins.push({ from, to: from + step - 1, n: 0 });
+    for (const s of sizes) bins[Math.floor((s - start) / step)].n++;
+    const most = Math.max(...bins.map((b) => b.n));
+
+    // Geometry.
+    const width = Math.max(240, el.spreadChart.clientWidth || 300);
+    const span = step * bins.length;
+    const slot = width / bins.length;
+    const barW = Math.min(24, slot - 2);
+    const base = CHART.top + CHART.height;
+    const x = (v) => ((v - start) / span) * width;
+    const y = (n) => base - (n / most) * CHART.height;
+
+    const root = svg("svg", { viewBox: `0 0 ${width} ${base + CHART.axis}`, height: base + CHART.axis,
+                              "aria-hidden": "true" });
+
+    // The middle 80% of rounds, behind the bars.
+    svg("rect", { class: "band", x: x(p10), y: CHART.top, height: CHART.height,
+                  width: Math.max(2, x(p90 + 1) - x(p10)) }, root);
+
+    const tip = document.createElement("div");
+    tip.className = "spread-tip";
+    tip.hidden = true;
+
+    bins.forEach((b, i) => {
+      const cx = i * slot + slot / 2;
+      // The hit area is the whole column, not just the painted bar.
+      const hit = svg("rect", { class: "hit", x: i * slot, y: CHART.top, width: slot, height: CHART.height }, root);
+      let bar = null;
+      if (b.n) {
+        const top = y(b.n), left = cx - barW / 2, r = Math.min(4, base - top, barW / 2);
+        // 4px rounded data-end, square at the baseline.
+        bar = svg("path", {
+          class: "bar",
+          d: `M${left},${base}V${top + r}Q${left},${top} ${left + r},${top}` +
+             `H${left + barW - r}Q${left + barW},${top} ${left + barW},${top + r}V${base}Z`,
+        }, root);
+      }
+      hit.addEventListener("pointerenter", () => {
+        const n = document.createElement("strong");
+        n.textContent = `${b.n} starting word${b.n === 1 ? "" : "s"}`;
+        tip.replaceChildren(n, `${rangeText(b, step)} words to find`);
+        tip.style.left = `${(cx / width) * 100}%`;
+        tip.style.top = `${y(b.n) - 6}px`;
+        tip.hidden = false;
+        bar?.classList.add("on");
+      });
+      hit.addEventListener("pointerleave", () => {
+        tip.hidden = true;
+        bar?.classList.remove("on");
+      });
+    });
+
+    // Median line, labelled.
+    const mx = x(p50 + 0.5);
+    svg("line", { class: "median", x1: mx, x2: mx, y1: CHART.top - 4, y2: base }, root);
+    const label = svg("text", { class: "median-label", x: mx, y: CHART.top - 8, "text-anchor": "middle" }, root);
+    label.textContent = `median ${fmt(p50)}`;
+
+    // Baseline and x ticks.
+    svg("line", { class: "axis", x1: 0, x2: width, y1: base + 0.5, y2: base + 0.5 }, root);
+    const tickStep = niceStep(span, 4);
+    for (let v = Math.ceil(start / tickStep) * tickStep; v <= start + span; v += tickStep) {
+      // Pull the end labels inside the chart rather than let them clip.
+      const px = x(v);
+      const anchor = px < 16 ? "start" : px > width - 16 ? "end" : "middle";
+      const t = svg("text", { x: px, y: base + 16, "text-anchor": anchor }, root);
+      t.textContent = fmt(v);
+    }
+
+    el.spreadChart.append(root, tip);
+
+    // The same numbers for screen readers.
+    el.spreadTable.createCaption().textContent =
+      `Words to find per round: median ${p50}, 80% of rounds ${p10} to ${p90}.`;
+    const head = el.spreadTable.insertRow();
+    for (const h of ["Words to find", "Starting words"]) {
+      const th = document.createElement("th");
+      th.textContent = h;
+      head.appendChild(th);
+    }
+    for (const b of bins) {
+      const row = el.spreadTable.insertRow();
+      row.insertCell().textContent = rangeText(b, step);
+      row.insertCell().textContent = b.n;
+    }
   }
 
   /* ---------- guessing ---------- */
@@ -182,10 +356,14 @@
       say("That's the whole word - find the ones hiding inside it.", "bad");
     } else if (!canBuild(word, state.pool)) {
       say(`"${word}" needs letters that aren't there.`, "bad");
-    } else if (state.found.has(word)) {
+    } else if (state.found.has(word) || state.bonus.has(word)) {
       say(`Already found "${word}".`, "");
-    } else if (!DICT.has(word)) {
+    } else if (!isWord(word)) {
       say(`"${word}" isn't in the dictionary.`, "bad");
+    } else if (!TARGETS.has(word)) {
+      state.bonus.add(word);
+      renderResults(word);
+      say(`"${word}" - bonus word! It doesn't count toward the total.`, "bonus");
     } else {
       state.found.add(word);
       update();
@@ -208,11 +386,13 @@
     renderResults();
 
     const missed = state.answers.length - state.found.size;
-    el.bannerTitle.textContent = won ? "Perfect round!" : "Here's the full list";
-    el.bannerText.textContent = won
+    const extra = state.bonus.size;
+    el.bannerTitle.textContent = won ? "Perfect round! \u{1F373}" : "Here's the full list";
+    el.bannerText.textContent = (won
       ? `You found every one of the ${state.answers.length} words.`
       : `You found ${state.found.size} of ${state.answers.length}. ` +
-        `${missed} word${missed === 1 ? "" : "s"} got away.`;
+        `${missed} word${missed === 1 ? "" : "s"} got away.`) +
+      (extra ? ` Plus ${extra} bonus word${extra === 1 ? "" : "s"}.` : "");
     el.banner.hidden = false;
     el.banner.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
@@ -230,17 +410,22 @@
     el.game.hidden = true;
     el.banner.hidden = true;
     el.setup.hidden = false;
+    renderSpread(); // the width may have changed while the setup screen was hidden
   }
 
   /* ---------- wiring ---------- */
 
-  el.length.addEventListener("input", () => { el.lengthOut.textContent = el.length.value; });
+  el.length.addEventListener("input", () => {
+    el.lengthOut.textContent = el.length.value;
+    renderSpread();
+  });
 
   el.minLen.addEventListener("click", (e) => {
     const btn = e.target.closest("button[data-min]");
     if (!btn) return;
     minLen = Number(btn.dataset.min);
     for (const b of el.minLen.children) b.classList.toggle("on", b === btn);
+    renderSpread();
   });
 
   el.start.addEventListener("click", () => {
@@ -250,7 +435,7 @@
     if (custom) {
       const problem = !/^[a-z]{5,20}$/.test(custom)
         ? "Letters only, 5 to 20 of them."
-        : !DICT.has(custom)
+        : !isWord(custom)
           ? `"${custom}" isn't in the game's dictionary - try another word.`
           : null;
       if (problem) {
@@ -296,6 +481,8 @@
   });
 
   el.lengthOut.textContent = el.length.value;
+  renderSpread();
+  window.addEventListener("resize", () => { if (!el.setup.hidden) renderSpread(); });
 
   /* ---------- phone: hold the page still and dock the box to the keyboard ----------
 

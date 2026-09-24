@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12141c">
 <title>Scramble</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍳</text></svg>">
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -12,29 +13,34 @@
 <div class="app">
 
   <header class="masthead">
+    <div class="logo" aria-hidden="true">🍳</div>
     <h1>SCRAMBLE</h1>
-    <p class="tagline">Find every word hiding inside the word.</p>
   </header>
 
   <!-- ---------- setup ---------- -->
   <section id="setup" class="panel">
     <div class="field">
-      <label for="length">Word length</label>
+      <label for="length">Starting word length</label>
       <div class="slider-row">
-        <input type="range" id="length" min="5" max="20" value="8">
-        <output id="lengthOut">8</output>
+        <input type="range" id="length" min="5" max="20" value="7">
+        <output id="lengthOut">7</output>
       </div>
-      <p class="hint">Longer words hide far more sub-words.</p>
     </div>
 
     <div class="field">
       <label>Shortest word that counts</label>
       <div class="segmented" id="minLen">
         <button type="button" data-min="2">2</button>
-        <button type="button" data-min="3" class="on">3</button>
-        <button type="button" data-min="4">4</button>
+        <button type="button" data-min="3">3</button>
+        <button type="button" data-min="4" class="on">4</button>
       </div>
-      <p class="hint">Higher means fewer, meatier words to find.</p>
+    </div>
+
+    <div class="field">
+      <label>Words to find</label>
+      <p class="spread-read" id="spreadRead"></p>
+      <div class="spread-chart" id="spreadChart"></div>
+      <table class="sr-only" id="spreadTable"></table>
     </div>
 
     <details class="field custom" id="customPanel">

@@ -11,6 +11,8 @@
   --accent-ink: #2a1d00;
   --good: #4ade80;
   --bad: #f87171;
+  --chart-bar: #b8821f;   /* a deeper step of --accent, so bars don't outshout the buttons */
+  --chart-band: rgba(238, 240, 247, .06);
   --radius: 14px;
   --tile: 46px;
 }
@@ -42,6 +44,8 @@ body {
 
 .masthead { text-align: center; margin: 8px 0 22px; }
 
+.logo { font-size: 34px; line-height: 1; margin-bottom: 6px; }
+
 .masthead h1 {
   margin: 0;
   font-size: clamp(28px, 9vw, 42px);
@@ -51,7 +55,6 @@ body {
   color: var(--accent);
 }
 
-.tagline { margin: 6px 0 0; color: var(--ink-dim); font-size: 14px; }
 
 /* ---------- panels & controls ---------- */
 
@@ -166,6 +169,49 @@ button.ghost {
 }
 button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
 
+/* ---------- words-to-find chart ---------- */
+
+.spread-read { margin: 0 0 10px; font-size: 14px; color: var(--ink-dim); }
+.spread-read strong { color: var(--ink); font-size: 17px; }
+
+.spread-chart { position: relative; }
+.spread-chart svg { display: block; width: 100%; overflow: visible; }
+.spread-chart .bar { fill: var(--chart-bar); pointer-events: none; }
+.spread-chart .bar.on { fill: var(--accent); }
+.spread-chart .hit { fill: transparent; cursor: default; }
+.spread-chart .band { fill: var(--chart-band); }
+.spread-chart :is(.band, .median, text) { pointer-events: none; }
+.spread-chart .median { stroke: var(--ink); stroke-width: 2; }
+.spread-chart .axis { stroke: var(--line); stroke-width: 1; }
+.spread-chart text {
+  fill: var(--ink-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.spread-chart text.median-label { fill: var(--ink); font-weight: 600; }
+
+.spread-tip {
+  position: absolute;
+  pointer-events: none;
+  padding: 6px 9px;
+  font-size: 12px;
+  color: var(--ink-dim);
+  white-space: nowrap;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  transform: translate(-50%, -100%);
+}
+.spread-tip strong { display: block; color: var(--ink); font-size: 14px; }
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
 /* ---------- letter tiles ---------- */
 
 .tiles-wrap { text-align: center; margin-bottom: 18px; }
@@ -254,6 +300,7 @@ button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
 }
 .message.good { color: var(--good); }
 .message.bad { color: var(--bad); }
+.message.bonus { color: var(--accent); }
 
 /* ---------- found words ---------- */
 
@@ -279,6 +326,7 @@ button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
 }
 .chip.mine { color: var(--good); border-color: rgba(74, 222, 128, .4); }
 .chip.missed { color: var(--ink-dim); opacity: .75; }
+.chip.bonus { color: var(--accent); border-color: rgba(255, 200, 87, .4); }
 .chip.fresh { animation: pop .3s ease; }
 
 @keyframes pop {
@@ -330,7 +378,6 @@ button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
   }
 
   .masthead { flex: none; margin: 4px 0 12px; }
-  .tagline { font-size: 13px; }
 
   .panel {
     flex: 1 1 auto;
