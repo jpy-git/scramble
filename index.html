@@ -100,6 +100,17 @@
 
 </div>
 
+<!-- ---------- tap a word: its definition ---------- -->
+<dialog id="defBox" class="def-box" aria-labelledby="defWord">
+  <div class="def-card">
+    <div class="def-head">
+      <h2 id="defWord"></h2>
+      <button type="button" id="defClose" class="def-close" aria-label="Close">&times;</button>
+    </div>
+    <div id="defBody"></div>
+  </div>
+</dialog>
+
 <script src="words.js"></script>
 <script src="game.js"></script>
 </body>
