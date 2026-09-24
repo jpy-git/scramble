@@ -27,7 +27,7 @@ so a plain reload can serve you a stale script.)
 
 | Option | What it does |
 | --- | --- |
-| Word length | 5–20 letters. A 6-letter word hides ~30 words; a 20-letter one hides over 1,000. |
+| Word length | 5–20 letters. With the default minimum, a typical 6-letter word hides ~20 words, a 12-letter one ~235, and 18+ letters over 1,000. Words of the same length vary a lot, since some letters combine far better than others: an 8-letter word can hide 22 or 97. |
 | Shortest word that counts | 2, 3 (default) or 4. Raising it cuts out the obscure two- and three-letter filler. |
 | Use my own word | Any real word from the game's dictionary, 5–20 letters. Applies to that one round, then clears. |
 

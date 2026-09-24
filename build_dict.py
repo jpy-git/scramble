@@ -26,6 +26,7 @@ Inputs:
 
 Output:
   words.js         - WORDS + BONUS + PUZZLES (starting words by length)
+                     + PUZZLE_COUNTS (each starting word's target count)
 
 Usage: pip install wordfreq && python3 build_dict.py
 """
@@ -42,12 +43,14 @@ PUZZLE_MAX_LEN = 20
 CANDIDATES_PER_LEN = 400  # most common words per length considered as puzzles
 KEEP_PER_LEN = 250        # how many survive into the shipped puzzle pool
 MIN_SUBWORDS = 10         # a starting word must yield at least this many targets
+MIN_LEN_SETTINGS = [2, 3, 4]  # the game's "shortest word that counts" options
 
 # Minimum Zipf frequency for a target word, by length, as a pair: the bar for a
 # word in popular.txt (or an inflection of one), then the bar for any other word
-# (None: never a target). Zipf 3 is about once per million words. popular.txt is the stronger signal - frequency data counts names and
-# abbreviations as words ("jun", "tel", "raj") - so its words get a lower bar,
-# and at 3-4 letters, where ENABLE is thick with lookalikes, nothing else counts.
+# (None: never a target). Zipf 3 is about once per million words. popular.txt
+# is the stronger signal - frequency data counts names and abbreviations as words
+# ("jun", "tel", "raj") - so its words get a lower bar, and at 3-4 letters, where
+# ENABLE is thick with lookalikes, nothing else counts.
 # Short words get the highest bar: they turn up in nearly every puzzle, so an
 # obscure one is felt every time, while a rare 9-letter word only surfaces in the
 # odd give-up list.
@@ -179,41 +182,47 @@ def main():
 
     # Index targets by their letter-set bitmask so we can find every word makeable
     # from a candidate by walking that candidate's submasks instead of the dictionary.
-    scoring = [w for w in answers if len(w) >= 3]
     by_mask = {}
-    for w in scoring:
+    for w in answers:
         mask = 0
         for ch in w:
             mask |= 1 << (ord(ch) - 97)
-        by_mask.setdefault(mask, []).append(Counter(w))
+        by_mask.setdefault(mask, []).append((len(w), Counter(w)))
 
     puzzles = {}
+    # For each puzzle word, how many targets it hides at each "shortest word"
+    # setting the game offers - feeds the chart on the setup screen.
+    counts = {}
     for length in range(PUZZLE_MIN_LEN, PUZZLE_MAX_LEN + 1):
         pool = sorted((w for w in answers if len(w) == length),
                       key=lambda w: -zipf.get(w, 0))[:CANDIDATES_PER_LEN]
         # Curated long words may rank too low to make the cut, so append them explicitly.
         pool += [w for w in EXTRA_LONG if len(w) == length and w not in pool]
 
-        kept = []
+        kept, kept_counts = [], []
         for word in pool:
             have = Counter(word)
             mask = 0
             for ch in word:
                 mask |= 1 << (ord(ch) - 97)
-            total = 0
+            by_min = [0] * len(MIN_LEN_SETTINGS)
             sub = mask
             while True:  # every submask of the word's letter set
-                for need in by_mask.get(sub, ()):
+                for size, need in by_mask.get(sub, ()):
                     if all(have[ch] >= n for ch, n in need.items()):
-                        total += 1
+                        for i, least in enumerate(MIN_LEN_SETTINGS):
+                            by_min[i] += size >= least
                 if sub == 0:
                     break
                 sub = (sub - 1) & mask
-            if total - 1 >= MIN_SUBWORDS:  # -1: the word itself is not a sub-word
+            by_min = [n - 1 for n in by_min]  # the word itself is not a sub-word
+            if by_min[MIN_LEN_SETTINGS.index(3)] >= MIN_SUBWORDS:
                 kept.append(word)
+                kept_counts.append(by_min)
             if len(kept) >= KEEP_PER_LEN:
                 break
         puzzles[length] = kept
+        counts[length] = kept_counts
         print(f"  len {length:2d}: {len(kept):3d} puzzle words")
 
     # A starting word must always be one of our own target words.
@@ -227,6 +236,11 @@ def main():
         fh.write("const BONUS = %s.split(' ');\n" % json.dumps(" ".join(bonus)))
         fh.write("const PUZZLES = %s;\n" % json.dumps(
             {str(k): v for k, v in puzzles.items() if v}, separators=(",", ":")))
+        # PUZZLE_COUNTS[length][i] lines up with PUZZLES[length][i]: that word's
+        # target count at each MIN_LENS setting.
+        fh.write("const MIN_LENS = %s;\n" % json.dumps(MIN_LEN_SETTINGS))
+        fh.write("const PUZZLE_COUNTS = %s;\n" % json.dumps(
+            {str(k): v for k, v in counts.items() if v}, separators=(",", ":")))
 
 
 if __name__ == "__main__":

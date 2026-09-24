@@ -11,6 +11,8 @@
   --accent-ink: #2a1d00;
   --good: #4ade80;
   --bad: #f87171;
+  --chart-bar: #b8821f;   /* a deeper step of --accent, so bars don't outshout the buttons */
+  --chart-band: rgba(238, 240, 247, .06);
   --radius: 14px;
   --tile: 46px;
 }
@@ -165,6 +167,59 @@ button.ghost {
   cursor: pointer;
 }
 button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
+
+/* ---------- words-to-find chart ---------- */
+
+.spread-read { margin: 0 0 10px; font-size: 14px; color: var(--ink-dim); }
+.spread-read strong { color: var(--ink); font-size: 17px; }
+
+.spread-chart { position: relative; }
+.spread-chart svg { display: block; width: 100%; overflow: visible; }
+.spread-chart .bar { fill: var(--chart-bar); pointer-events: none; }
+.spread-chart .bar.on { fill: var(--accent); }
+.spread-chart .hit { fill: transparent; cursor: default; }
+.spread-chart .band { fill: var(--chart-band); }
+.spread-chart :is(.band, .median, text) { pointer-events: none; }
+.spread-chart .median { stroke: var(--ink); stroke-width: 2; }
+.spread-chart .axis { stroke: var(--line); stroke-width: 1; }
+.spread-chart text {
+  fill: var(--ink-dim);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.spread-chart text.median-label { fill: var(--ink); font-weight: 600; }
+
+.spread-tip {
+  position: absolute;
+  pointer-events: none;
+  padding: 6px 9px;
+  font-size: 12px;
+  color: var(--ink-dim);
+  white-space: nowrap;
+  background: var(--panel-2);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  transform: translate(-50%, -100%);
+}
+.spread-tip strong { display: block; color: var(--ink); font-size: 14px; }
+
+.key-band {
+  display: inline-block;
+  width: 12px; height: 10px;
+  margin-right: 6px;
+  vertical-align: -1px;
+  border-radius: 2px;
+  background: var(--chart-band);
+  outline: 1px solid var(--line);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
 
 /* ---------- letter tiles ---------- */
 
