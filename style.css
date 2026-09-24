@@ -254,6 +254,7 @@ button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
 }
 .message.good { color: var(--good); }
 .message.bad { color: var(--bad); }
+.message.bonus { color: var(--accent); }
 
 /* ---------- found words ---------- */
 
@@ -279,6 +280,7 @@ button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
 }
 .chip.mine { color: var(--good); border-color: rgba(74, 222, 128, .4); }
 .chip.missed { color: var(--ink-dim); opacity: .75; }
+.chip.bonus { color: var(--accent); border-color: rgba(255, 200, 87, .4); }
 .chip.fresh { animation: pop .3s ease; }
 
 @keyframes pop {

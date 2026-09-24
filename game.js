@@ -1,6 +1,6 @@
 /* Scramble - game logic.
-   Depends on WORDS (all valid answers) and PUZZLES (starting words by length)
-   from words.js. */
+   Depends on WORDS (target words), BONUS (every other accepted word) and
+   PUZZLES (starting words by length) from words.js. */
 
 (() => {
   "use strict";
@@ -20,7 +20,11 @@
     bannerTitle: $("bannerTitle"), bannerText: $("bannerText"), bannerNew: $("bannerNew"),
   };
 
-  const DICT = new Set(WORDS);
+  // A guess is accepted if it is in either list, but only WORDS count toward
+  // the puzzle - see build_dict.py for how the two are split.
+  const TARGETS = new Set(WORDS);
+  const EXTRAS = new Set(BONUS);
+  const isWord = (w) => TARGETS.has(w) || EXTRAS.has(w);
   const CUSTOM_HINT = "A real word, 5\u201320 letters.";
 
   let state = null;
@@ -66,6 +70,7 @@
       pool: tally(word),
       answers: answersFor(word, minLen),
       found: new Set(),
+      bonus: new Set(),
       over: false,
     };
 
@@ -131,7 +136,6 @@
       : state.answers.filter((w) => state.found.has(w));
 
     el.results.innerHTML = "";
-    if (!show.length) return;
 
     const byLength = new Map();
     for (const w of show) {
@@ -162,6 +166,33 @@
       group.appendChild(chips);
       el.results.appendChild(group);
     }
+
+    renderBonus(freshWord);
+  }
+
+  // Bonus words are real but uncommon, so they sit apart from the words the
+  // puzzle counts.
+  function renderBonus(freshWord) {
+    if (!state.bonus.size) return;
+
+    const group = document.createElement("div");
+    group.className = "group";
+
+    const heading = document.createElement("h3");
+    heading.textContent = `Bonus words - ${state.bonus.size}`;
+    group.appendChild(heading);
+
+    const chips = document.createElement("div");
+    chips.className = "chips";
+    const words = [...state.bonus].sort((a, b) => b.length - a.length || a.localeCompare(b));
+    for (const w of words) {
+      const chip = document.createElement("span");
+      chip.className = "chip bonus" + (w === freshWord ? " fresh" : "");
+      chip.textContent = w;
+      chips.appendChild(chip);
+    }
+    group.appendChild(chips);
+    el.results.appendChild(group);
   }
 
   function say(text, tone) {
@@ -182,10 +213,14 @@
       say("That's the whole word - find the ones hiding inside it.", "bad");
     } else if (!canBuild(word, state.pool)) {
       say(`"${word}" needs letters that aren't there.`, "bad");
-    } else if (state.found.has(word)) {
+    } else if (state.found.has(word) || state.bonus.has(word)) {
       say(`Already found "${word}".`, "");
-    } else if (!DICT.has(word)) {
+    } else if (!isWord(word)) {
       say(`"${word}" isn't in the dictionary.`, "bad");
+    } else if (!TARGETS.has(word)) {
+      state.bonus.add(word);
+      renderResults(word);
+      say(`"${word}" - bonus word! It doesn't count toward the total.`, "bonus");
     } else {
       state.found.add(word);
       update();
@@ -208,11 +243,13 @@
     renderResults();
 
     const missed = state.answers.length - state.found.size;
+    const extra = state.bonus.size;
     el.bannerTitle.textContent = won ? "Perfect round!" : "Here's the full list";
-    el.bannerText.textContent = won
+    el.bannerText.textContent = (won
       ? `You found every one of the ${state.answers.length} words.`
       : `You found ${state.found.size} of ${state.answers.length}. ` +
-        `${missed} word${missed === 1 ? "" : "s"} got away.`;
+        `${missed} word${missed === 1 ? "" : "s"} got away.`) +
+      (extra ? ` Plus ${extra} bonus word${extra === 1 ? "" : "s"}.` : "");
     el.banner.hidden = false;
     el.banner.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
@@ -250,7 +287,7 @@
     if (custom) {
       const problem = !/^[a-z]{5,20}$/.test(custom)
         ? "Letters only, 5 to 20 of them."
-        : !DICT.has(custom)
+        : !isWord(custom)
           ? `"${custom}" isn't in the game's dictionary - try another word.`
           : null;
       if (problem) {
