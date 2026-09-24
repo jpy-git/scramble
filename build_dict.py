@@ -13,16 +13,20 @@ Splitting the two means the target list can be strict without the game ever
 rejecting a real word.
 
 Inputs:
-  data/enable1.txt - ENABLE word list, ~173k words (dolph/dictionary).
-                     Scrabble-derived, so it carries no proper nouns, abbreviations
-                     or apostrophe-stripped contractions. This is the gatekeeper:
-                     every accepted word appears here (bar MODERN / EXTRA_LONG).
-  data/popular.txt - ~25k common English words (dolph/dictionary), a subset of
-                     ENABLE. Words in it get a lower frequency bar,
-                     and at 3-4 letters only its words can be targets.
-  wordfreq         - Python package (pip install wordfreq). Zipf frequency drawn
-                     from Wikipedia, books, news, web text and subtitles; it
-                     decides which words are common enough to be targets.
+  data/enable1.txt  - ENABLE word list, ~173k words (dolph/dictionary).
+                      Scrabble-derived, so it carries no proper nouns,
+                      abbreviations or apostrophe-stripped contractions. It sets
+                      what is accepted, along with 3of6game.txt.
+  data/3of6game.txt - 12dicts "3of6game" list by Alan Beale (public domain,
+                      wordlist.aspell.net/12dicts), ~65k words. Words listed in at
+                      least 3 of 6 advanced learner's dictionaries, compiled for
+                      word games: no names, abbreviations or obscure Scrabble
+                      words, but with inflections, British spellings and some
+                      neologisms. Only its words can be targets.
+  wordfreq          - Python package (pip install wordfreq). Zipf frequency drawn
+                      from Wikipedia, books, news, web text and subtitles; among
+                      3of6game words, it decides which are common enough to be
+                      targets.
 
 Output:
   words.js         - WORDS + BONUS + PUZZLES (starting words by length)
@@ -45,17 +49,12 @@ KEEP_PER_LEN = 250        # how many survive into the shipped puzzle pool
 MIN_SUBWORDS = 10         # a starting word must yield at least this many targets
 MIN_LEN_SETTINGS = [2, 3, 4]  # the game's "shortest word that counts" options
 
-# Minimum Zipf frequency for a target word, by length, as a pair: the bar for a
-# word in popular.txt (or an inflection of one), then the bar for any other word
-# (None: never a target). Zipf 3 is about once per million words. popular.txt
-# is the stronger signal - frequency data counts names and abbreviations as words
-# ("jun", "tel", "raj") - so its words get a lower bar, and at 3-4 letters, where
-# ENABLE is thick with lookalikes, nothing else counts.
-# Short words get the highest bar: they turn up in nearly every puzzle, so an
-# obscure one is felt every time, while a rare 9-letter word only surfaces in the
-# odd give-up list.
-TARGET_ZIPF = {3: (3.0, None), 4: (2.7, None), 5: (2.5, 3.0), 6: (2.4, 2.9), 7: (2.3, 2.8)}
-TARGET_ZIPF_LONG = (2.2, 2.6)   # 8 letters and up
+# Minimum Zipf frequency for a target word, by length. Zipf 3 is about once per
+# million words. Short words get the highest bar: they turn up in nearly every
+# puzzle, so an obscure one is felt every time, while a rare 9-letter word only
+# surfaces in the odd give-up list.
+TARGET_ZIPF = {3: 3.0, 4: 2.7, 5: 2.5, 6: 2.5, 7: 2.5}
+TARGET_ZIPF_LONG = 2.4   # 8 letters and up
 
 # Two-letter words are too few to need a rule and too junk-prone to trust one.
 TWO_LETTER_TARGETS = """
@@ -96,84 +95,59 @@ nigger niggers nigga niggas faggot faggots fag fags spic spics spick spicks
 chink chinks chinky kike kikes gook gooks wetback wetbacks tranny trannies coon
 coons retard retards retarded negro negroes dago dagoes wop wops gyp gyps gypped
 honky honkies jew jews jewed jewing kaffir kaffirs redskin redskins darky darkies
-darkey squaw squaws coolie coolies mick micks
+darkey squaw squaws coolie coolies mick micks niggaz
 """.split()
 
-# Everyday words the rules above miss, mostly short ones absent from popular.txt.
-# Always targets.
-ALSO_TARGET = """
-apt gait gnat gnats lain pang roe tang tsar fig figs bio yak aft
-""".split()
-
-# Accepted as bonus words but never targets: names and places that happen to be
-# in ENABLE and are common only as proper nouns, stray abbreviations and
-# foreign fragments, and words too crude to require. Add to this as they turn up.
+# Real 3of6game words that are common enough to be targets, but shouldn't be.
+# Still accepted as bonus words. The build warns if an entry here would no longer
+# be a target anyway, so the list only holds words that need it.
 NOT_TARGET = """
-ami ana ava bel bey bis cor cos cox dee dis dom dos dun eng ems eta goa hes hon
-hun ids ins jin kat kay lac lam lex lin mae mag mas mel mil mis mod mos nam nan
-nos obi ole ons pac pam pas rec res rex rom sal sen ser sha sic sim sis sol sos
-sox tae taj tat til tis tor vis wha yeh yin cum tit ais ars att bas bos dex dey
-ers eth fas fer ich lis mor mus pes rem rin tas tau tod aga coz dah deb hoy jus
-mol pap pom tic ump zee
-
-alec alma anna bach beth brad brit cain carl carr chad cobb cole cory dahl davy
-dell earl eyre ford glen holt howe jake jane jess jill john josh kane kent kirk
-kris lang lars lear lima lowe luna marc matt maya mike milo mina noel otto rand
-rolf ruth saul scot shaw shay tate toby tony troy tung turk vera wynn conn bree
-lulu sous amin gage kern bren brin hons lacs pacs sark sade tass poms roms nils
-mano loca sacs lees gens mons montes hales
-casas cates howes janes jakes nance neves earls conners dobbins palmers eugenia
-cunt fuck piss slut tits turd twat homo dyke dykes shes
-
-wales calif surrey tesla congo leone cisco toledo wigan levin pascal sharif
-madras fulham ridley hooper cairns draper sabine seneca derry cicero conte brasil
-liang macon moira bethel lister tonga currie mullen romano roper argus gambia
-garvey spicer kamala culver maduro penang saxony chopin argyll melton nestor
-adonis merlin dexter kyrie sheila regina dalton louie lacey
-
-bangkok frankfurt valencia bolivia siemens tripoli inverness underwood greenwood
-khalifa matilda dominique johannes andromeda chesterfield nickelodeon cummins
-coulter prentice whitehead shetland piedmont corolla templar
+cor cos cox dis dos dun hon ids ins jus lam lees mag mas mil mod nan ole pas sic
+sim sis sol tat til tis tod tor yin fas deb pap pom ump
+dell gage john josh kent kirk matt mike rand tony ted ken meg las
+calif surrey madras cairns draper sheila
+cum cunt dyke dykes fuck piss slut tit tits turd twat
 """.split()
+# Line by line: short words whose frequency comes mostly from abbreviations,
+# other languages or names ("cos", "dis", "sol"); words that are mostly first
+# names in practice; place names and surnames; words too crude to require.
 
 
 def read_words(name):
-    return {w.strip() for w in open(DATA + name) if w.strip().isalpha() and w.strip().isascii()}
+    # 12dicts marks some entries with a trailing annotation ("$", "+", "^", "&",
+    # "!") saying why they were included; the word itself is all we need.
+    words = set()
+    for line in open(DATA + name, encoding="latin-1"):
+        w = line.strip().rstrip("$+^&!").lower()
+        if w.isalpha() and w.isascii():
+            words.add(w)
+    return words
 
 
-def inflects(word, base_words):
-    """True if `word` looks like a plural or verb form of something in `base_words`."""
-    for suffix, stem_end in (("ies", "y"), ("es", ""), ("s", ""), ("ed", ""), ("ed", "e"),
-                             ("ing", ""), ("ing", "e")):
-        if word.endswith(suffix) and word[: -len(suffix)] + stem_end in base_words:
-            return True
-    return False
-
-
-def is_target(word, zipf, popular):
+def is_target(word, zipf, learner):
     if len(word) == 2:
         return word in TWO_LETTER_TARGETS
-    common, other = TARGET_ZIPF.get(len(word), TARGET_ZIPF_LONG)
-    if word in popular or inflects(word, popular):
-        return zipf >= common
-    return other is not None and zipf >= other
+    return word in learner and zipf >= TARGET_ZIPF.get(len(word), TARGET_ZIPF_LONG)
 
 
 def main():
     enable = read_words("enable1.txt")
-    popular = read_words("popular.txt")
+    learner = read_words("3of6game.txt")
     blocked = set(BLOCKED)
 
-    accepted = {w for w in enable | set(MODERN) | set(EXTRA_LONG)
+    accepted = {w for w in enable | learner | set(MODERN) | set(EXTRA_LONG)
                 if MIN_ANSWER <= len(w) <= MAX_ANSWER} - blocked
     zipf = {w: zipf_frequency(w, "en") for w in accepted}
 
-    targets = {w for w in accepted if is_target(w, zipf[w], popular)}
-    targets |= set(MODERN) | set(EXTRA_LONG) | set(ALSO_TARGET)
+    targets = {w for w in accepted if is_target(w, zipf[w], learner)}
+    stale = [w for w in NOT_TARGET if w not in targets]
+    if stale:
+        print(f"NOT_TARGET entries that would not be targets anyway: {stale}")
+    targets |= set(MODERN) | set(EXTRA_LONG)
     targets -= set(NOT_TARGET)
     targets -= blocked
 
-    missing = [w for w in TWO_LETTER_TARGETS + ALSO_TARGET + NOT_TARGET if w not in accepted]
+    missing = [w for w in TWO_LETTER_TARGETS if w not in accepted]
     assert not missing, f"listed words missing from the dictionary: {missing}"
 
     answers = sorted(targets)
