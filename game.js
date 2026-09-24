@@ -563,10 +563,13 @@
   el.newGame.addEventListener("click", backToSetup);
   el.bannerNew.addEventListener("click", backToSetup);
 
-  // Tap a found word for its definition.
+  // Tap a found word for its definition. The chip stays marked while it's
+  // open, so after giving up it's clear which of the list it was.
   el.results.addEventListener("click", (e) => {
     const chip = e.target.closest(".chip");
-    if (chip) showDef(chip.textContent);
+    if (!chip) return;
+    chip.classList.add("looked");
+    showDef(chip.textContent);
   });
   el.defBody.addEventListener("click", (e) => {
     const link = e.target.closest(".def-link");
@@ -578,6 +581,7 @@
     if (e.target === el.defBox) el.defBox.close();
   });
   el.defBox.addEventListener("close", () => {
+    el.results.querySelector(".looked")?.classList.remove("looked");
     if (!el.game.hidden && !state?.over) el.guess.focus();
   });
 
