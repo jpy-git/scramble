@@ -19,7 +19,7 @@ python3 -m http.server 8777
 ```
 
 Then open <http://localhost:8777>. No build step, no dependencies — it's three
-static files plus a dictionary. (After editing a file, hard-refresh with
+static files plus a dictionary and its definitions. (After editing a file, hard-refresh with
 <kbd>Cmd</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>; `http.server` sends no cache headers,
 so a plain reload can serve you a stale script.)
 
@@ -33,7 +33,8 @@ so a plain reload can serve you a stale script.)
 
 While playing: the starting word is shown as itself, in order. Tiles light up as
 you type to show which letters you're spending, and typing anywhere on the page
-jumps to the input box.
+jumps to the input box. Tap any word in the list — found, bonus, or missed after
+giving up — to see what it means.
 
 No timer, no clock. Take as long as you like.
 
@@ -45,8 +46,10 @@ No timer, no clock. Take as long as you like.
 | `style.css` | Styling — mobile-first, so it already behaves on a phone |
 | `game.js` | All game logic |
 | `words.js` | Generated dictionary: `WORDS` (target words) + `BONUS` (other accepted words) + `PUZZLES` (starting words by length) + `PUZZLE_COUNTS` (how many targets each starting word hides) |
+| `defs.js` | Generated definitions: `DEFS`, loaded in the background once the page is up |
 | `build_dict.py` | Regenerates `words.js` from `data/` |
-| `data/` | Raw source word lists |
+| `build_defs.py` | Regenerates `defs.js` from `words.js` and WordNet |
+| `data/` | Raw source word lists, and WordNet's licence |
 
 ## The dictionary
 
@@ -90,10 +93,40 @@ python3 build_dict.py
 
 `words.js` is ~1.8 MB (~510 KB gzipped), mostly the bonus list.
 
+## Definitions
+
+Tapping a word shows its definition from [WordNet](https://wordnet.princeton.edu/)
+3.0: up to three senses for a target word, one for a bonus word (there are four
+times as many, and one sense is enough to answer "is that really a word?").
+About 105k of the 176k words have one, including all but ~1,000 of the 35k
+targets. The misses are mostly function words WordNet leaves out (`and`,
+`among`) and words newer than it (`app`, `airbag`); they say so rather than
+guess.
+
+WordNet only lists base forms, so an inflected word points at its base and shows
+that word's senses as the matching part of speech: `sores` is "plural of *sore*"
+with the noun, not "hurting". A word that is both (`rose`: the flower, and the
+past of *rise*) shows each reading, most common first. A form only ever points
+at a word the game accepts, which keeps the blocked words out.
+
+`defs.js` is ~8 MB (~2 MB gzipped), so the page fetches it after loading rather
+than making the first puzzle wait; a tap that beats it shows "Looking it up…" and
+fills in when it lands. To rebuild after changing the word lists:
+
+```sh
+pip install nltk
+python3 -c "import nltk; nltk.download('wordnet')"
+python3 build_defs.py
+```
+
 ### Credits
 
 `data/3of6game.txt` is from [12dicts](https://wordlist.aspell.net/12dicts/) by
 Alan Beale, released into the public domain.
+
+Definitions are from WordNet 3.0, Copyright 2006 by Princeton University, used
+under the WordNet licence (`data/wordnet-LICENSE.txt`, also at the top of
+`defs.js`).
 
 ## Next
 

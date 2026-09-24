@@ -1,7 +1,8 @@
 /* Scramble - game logic.
    Depends on WORDS (target words), BONUS (every other accepted word), PUZZLES
    (starting words by length) and PUZZLE_COUNTS / MIN_LENS (each starting word's
-   target count per "shortest word" setting) from words.js. */
+   target count per "shortest word" setting) from words.js, and DEFS
+   (definitions) from defs.js once that has loaded - see loadDefs. */
 
 (() => {
   "use strict";
@@ -20,6 +21,7 @@
     guessForm: $("guessForm"), guess: $("guess"), message: $("message"),
     results: $("results"), giveUp: $("giveUp"), newGame: $("newGame"),
     bannerTitle: $("bannerTitle"), bannerText: $("bannerText"), bannerNew: $("bannerNew"),
+    defBox: $("defBox"), defWord: $("defWord"), defBody: $("defBody"), defClose: $("defClose"),
   };
 
   // A guess is accepted if it is in either list, but only WORDS count toward
@@ -159,7 +161,8 @@
       const chips = document.createElement("div");
       chips.className = "chips";
       for (const w of words) {
-        const chip = document.createElement("span");
+        const chip = document.createElement("button");
+        chip.type = "button";
         const got = state.found.has(w);
         chip.className = "chip " + (got ? "mine" : "missed") + (w === freshWord ? " fresh" : "");
         chip.textContent = w;
@@ -188,7 +191,8 @@
     chips.className = "chips";
     const words = [...state.bonus].sort((a, b) => b.length - a.length || a.localeCompare(b));
     for (const w of words) {
-      const chip = document.createElement("span");
+      const chip = document.createElement("button");
+      chip.type = "button";
       chip.className = "chip bonus" + (w === freshWord ? " fresh" : "");
       chip.textContent = w;
       chips.appendChild(chip);
@@ -413,6 +417,92 @@
     renderSpread(); // the width may have changed while the setup screen was hidden
   }
 
+  /* ---------- definitions ---------- */
+
+  // defs.js is several megabytes, so it is fetched once the page is up rather
+  // than holding up the first puzzle. DEFS doesn't exist until it arrives.
+  let defs = "loading";
+
+  function loadDefs() {
+    const script = document.createElement("script");
+    script.src = "defs.js";
+    script.onload = () => { defs = "ready"; refreshDef(); };
+    script.onerror = () => { defs = "failed"; refreshDef(); };
+    document.body.appendChild(script);
+  }
+
+  // A tap that beat the download gets its answer as soon as there is one.
+  function refreshDef() {
+    if (el.defBox.open) showDef(el.defWord.textContent);
+  }
+
+  // hasOwn, not DEFS[word]: "constructor" is a word too.
+  const entryFor = (word) =>
+    defs === "ready" && Object.hasOwn(DEFS, word) ? DEFS[word] : null;
+
+  function note(text) {
+    const p = document.createElement("p");
+    p.className = "def-note";
+    p.textContent = text;
+    return p;
+  }
+
+  function senseList(senses) {
+    const list = document.createElement("ol");
+    list.className = "def-senses";
+    for (const [pos, gloss] of senses) {
+      const li = document.createElement("li");
+      const tag = document.createElement("span");
+      tag.className = "def-pos";
+      tag.textContent = pos;
+      li.append(tag, " ", gloss);
+      list.appendChild(li);
+    }
+    return list;
+  }
+
+  // "plural of sore", with sore's senses as that part of speech underneath (the
+  // noun, not "hurting"). The base word is a link to its full entry.
+  function formBlock([label, base, pos]) {
+    const block = document.createElement("div");
+    block.className = "def-form";
+    const line = document.createElement("p");
+    const link = document.createElement("button");
+    link.type = "button";
+    link.className = "def-link";
+    link.textContent = base;
+    line.append(label + " ", link);
+    block.appendChild(line);
+    const senses = (entryFor(base)?.[0] || []).filter((s) => s[0] === pos);
+    if (senses.length) block.appendChild(senseList(senses.slice(0, 2)));
+    return block;
+  }
+
+  function showDef(word) {
+    el.defWord.textContent = word;
+    const parts = [];
+
+    if (defs === "loading") {
+      parts.push(note("Looking it up…"));
+    } else if (defs === "failed") {
+      parts.push(note("Definitions couldn't be loaded."));
+    } else {
+      const entry = entryFor(word);
+      if (!entry) {
+        parts.push(note("No definition for this one."));
+      } else {
+        const [senses, forms = [], formsFirst] = entry;
+        if (senses.length) parts.push(senseList(senses));
+        parts.push(...forms.map(formBlock));
+        if (formsFirst) parts.push(parts.shift());
+      }
+    }
+
+    el.defBody.replaceChildren(...parts);
+    if (!el.defBox.open) el.defBox.showModal();
+    el.defBox.querySelector(".def-card").scrollTop = 0;
+  }
+
   /* ---------- wiring ---------- */
 
   el.length.addEventListener("input", () => {
@@ -473,10 +563,33 @@
   el.newGame.addEventListener("click", backToSetup);
   el.bannerNew.addEventListener("click", backToSetup);
 
-  // Typing anywhere on the page should land in the guess box.
+  // Tap a found word for its definition.
+  el.results.addEventListener("click", (e) => {
+    const chip = e.target.closest(".chip");
+    if (chip) showDef(chip.textContent);
+  });
+  el.defBody.addEventListener("click", (e) => {
+    const link = e.target.closest(".def-link");
+    if (link) showDef(link.textContent);
+  });
+  el.defClose.addEventListener("click", () => el.defBox.close());
+  // The card fills the dialog, so a click on the dialog itself is the backdrop.
+  el.defBox.addEventListener("click", (e) => {
+    if (e.target === el.defBox) el.defBox.close();
+  });
+  el.defBox.addEventListener("close", () => {
+    if (!el.game.hidden && !state?.over) el.guess.focus();
+  });
+
+  if (document.readyState === "complete") loadDefs();
+  else window.addEventListener("load", loadDefs);
+
+  // Typing anywhere on the page should land in the guess box - closing a
+  // definition on the way, if one is open.
   document.addEventListener("keydown", (e) => {
     if (el.game.hidden || state?.over) return;
     if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (el.defBox.open && /^[a-zA-Z]$/.test(e.key)) el.defBox.close();
     if (document.activeElement !== el.guess && /^[a-zA-Z]$/.test(e.key)) el.guess.focus();
   });
 
