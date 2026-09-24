@@ -30,7 +30,7 @@
   const CUSTOM_HINT = "A real word, 5\u201320 letters.";
 
   let state = null;
-  let minLen = 3;
+  let minLen = 4;
 
   /* ---------- letters ---------- */
 
@@ -247,8 +247,8 @@
     const lo = sizes[0], hi = sizes[sizes.length - 1];
 
     const typical = document.createElement("strong");
-    typical.textContent = `~${fmt(p50)} words`;
-    el.spreadRead.append("A typical round has ", typical, `; 8 in 10 have ${fmt(p10)}\u2013${fmt(p90)}.`);
+    typical.textContent = `${fmt(p50)} words`;
+    el.spreadRead.append("Median ", typical, `. 80% of rounds: ${fmt(p10)}\u2013${fmt(p90)} words.`);
     if (sizes.length < 20) el.spreadRead.append(` Only ${sizes.length} starting words at this length.`);
 
     // Bin the counts.
@@ -312,7 +312,7 @@
     const mx = x(p50 + 0.5);
     svg("line", { class: "median", x1: mx, x2: mx, y1: CHART.top - 4, y2: base }, root);
     const label = svg("text", { class: "median-label", x: mx, y: CHART.top - 8, "text-anchor": "middle" }, root);
-    label.textContent = `typical ${fmt(p50)}`;
+    label.textContent = `median ${fmt(p50)}`;
 
     // Baseline and x ticks.
     svg("line", { class: "axis", x1: 0, x2: width, y1: base + 0.5, y2: base + 0.5 }, root);
@@ -329,7 +329,7 @@
 
     // The same numbers for screen readers.
     el.spreadTable.createCaption().textContent =
-      `Words to find per round: typical ${p50}, 8 in 10 rounds between ${p10} and ${p90}.`;
+      `Words to find per round: median ${p50}, 80% of rounds ${p10} to ${p90}.`;
     const head = el.spreadTable.insertRow();
     for (const h of ["Words to find", "Starting words"]) {
       const th = document.createElement("th");
@@ -387,7 +387,7 @@
 
     const missed = state.answers.length - state.found.size;
     const extra = state.bonus.size;
-    el.bannerTitle.textContent = won ? "Perfect round!" : "Here's the full list";
+    el.bannerTitle.textContent = won ? "Perfect round! \u{1F373}" : "Here's the full list";
     el.bannerText.textContent = (won
       ? `You found every one of the ${state.answers.length} words.`
       : `You found ${state.found.size} of ${state.answers.length}. ` +

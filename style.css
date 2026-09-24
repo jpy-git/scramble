@@ -44,6 +44,8 @@ body {
 
 .masthead { text-align: center; margin: 8px 0 22px; }
 
+.logo { font-size: 34px; line-height: 1; margin-bottom: 6px; }
+
 .masthead h1 {
   margin: 0;
   font-size: clamp(28px, 9vw, 42px);
@@ -53,7 +55,6 @@ body {
   color: var(--accent);
 }
 
-.tagline { margin: 6px 0 0; color: var(--ink-dim); font-size: 14px; }
 
 /* ---------- panels & controls ---------- */
 
@@ -202,16 +203,6 @@ button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
   transform: translate(-50%, -100%);
 }
 .spread-tip strong { display: block; color: var(--ink); font-size: 14px; }
-
-.key-band {
-  display: inline-block;
-  width: 12px; height: 10px;
-  margin-right: 6px;
-  vertical-align: -1px;
-  border-radius: 2px;
-  background: var(--chart-band);
-  outline: 1px solid var(--line);
-}
 
 .sr-only {
   position: absolute;
@@ -387,7 +378,6 @@ button.ghost:hover { color: var(--ink); border-color: var(--ink-dim); }
   }
 
   .masthead { flex: none; margin: 4px 0 12px; }
-  .tagline { font-size: 13px; }
 
   .panel {
     flex: 1 1 auto;
